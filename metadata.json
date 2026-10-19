@@ -1,0 +1,6 @@
+{
+  "name": "Student Information Dissemination System",
+  "description": "Academic information dissemination system with role-based broadcasts, course materials, SMS/Email alerts, CGPA calculator, and student collaboration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

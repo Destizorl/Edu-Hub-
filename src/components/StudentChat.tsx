@@ -2,116 +2,90 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, ChatMessage } from '../types';
 import { 
   MessageSquare, 
-  Search, 
   Send, 
-  ShieldCheck, 
+  Mic, 
+  Square, 
+  Play, 
+  Pause, 
+  Trash2, 
+  Search, 
+  Volume2, 
   ShieldAlert, 
-  UserCheck, 
-  Clock, 
-  Check, 
+  Lock, 
   CheckCheck,
-  AlertCircle,
-  GraduationCap,
   Sparkles,
-  Lock,
-  Mic,
-  Square,
-  Play,
-  Pause,
-  Trash2,
-  Volume2,
-  VolumeX,
+  ShieldCheck,
+  FileText,
+  UserCheck,
   FastForward,
   ArrowLeft
 } from 'lucide-react';
-import { formatAudioDuration, createSyntheticVoiceBlob, generateWaveform } from '../utils/audio';
 
 interface StudentChatProps {
   currentUser: User;
   allUsers: User[];
   messages: ChatMessage[];
-  onSendMessage: (
-    receiverId: string, 
-    content: string, 
-    voiceData?: { audioUrl: string; duration: number; waveform: number[] }
-  ) => void;
+  onSendMessage: (receiverId: string, content: string, voiceData?: { audioUrl: string; duration: number; waveform: number[] }) => void;
 }
 
-// Voice Note Player Component
+// Sub-component: Audio message player
 const VoiceMessagePlayer: React.FC<{
   audioUrl?: string;
-  duration?: number;
+  duration: number;
   waveform?: number[];
   transcript?: string;
   isMe: boolean;
-}> = ({ audioUrl, duration = 8, waveform, transcript, isMe }) => {
+}> = ({ audioUrl, duration, waveform, transcript, isMe }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState<number>(1);
+  const [playbackRate, setPlaybackRate] = useState<1 | 1.5 | 2>(1);
   const [showTranscript, setShowTranscript] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // Fallback sound if audioUrl isn't provided
-  const [resolvedAudioUrl, setResolvedAudioUrl] = useState<string>(audioUrl || '');
-
-  useEffect(() => {
-    if (!audioUrl) {
-      const generated = createSyntheticVoiceBlob(duration);
-      setResolvedAudioUrl(generated);
-    } else {
-      setResolvedAudioUrl(audioUrl);
-    }
-  }, [audioUrl, duration]);
-
   const defaultWaveform = waveform && waveform.length > 0 
     ? waveform 
-    : [30, 45, 75, 90, 65, 50, 70, 85, 95, 80, 60, 45, 65, 85, 90, 70, 50, 35, 60, 75, 55, 30];
+    : [20, 45, 75, 30, 90, 60, 40, 80, 50, 100, 70, 35, 85, 60, 40, 25];
+
+  const resolvedAudioUrl = audioUrl && audioUrl.length > 10 ? audioUrl : 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=';
 
   const togglePlay = () => {
     if (!audioRef.current) return;
-
     if (isPlaying) {
       audioRef.current.pause();
       setIsPlaying(false);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
     } else {
       audioRef.current.playbackRate = playbackRate;
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsPlaying(true);
-          updateProgress();
-        })
-        .catch(() => {
-          // If browser autoplay policy or sandbox error, simulate visual playback
-          simulatePlayback();
-        });
+      audioRef.current.play().then(() => {
+        setIsPlaying(true);
+        trackProgress();
+      }).catch((e) => {
+        console.warn('Simulated audio play', e);
+        setIsPlaying(true);
+        simulatePlayback();
+      });
     }
   };
 
   const simulatePlayback = () => {
-    setIsPlaying(true);
-    const start = Date.now();
-    const totalMs = duration * 1000;
-
+    let start = Date.now() - (currentTime * 1000) / playbackRate;
     const interval = setInterval(() => {
-      const elapsed = (Date.now() - start) * playbackRate;
-      const progressSec = Math.min(duration, elapsed / 1000);
-      setCurrentTime(progressSec);
-
-      if (progressSec >= duration) {
+      const elapsed = ((Date.now() - start) / 1000) * playbackRate;
+      if (elapsed >= duration) {
         clearInterval(interval);
         setIsPlaying(false);
         setCurrentTime(0);
+      } else {
+        setCurrentTime(elapsed);
       }
     }, 100);
   };
 
-  const updateProgress = () => {
+  const trackProgress = () => {
     if (audioRef.current && !audioRef.current.paused) {
       setCurrentTime(audioRef.current.currentTime);
-      animationFrameRef.current = requestAnimationFrame(updateProgress);
+      animationFrameRef.current = requestAnimationFrame(trackProgress);
     }
   };
 
@@ -147,10 +121,10 @@ const VoiceMessagePlayer: React.FC<{
       <button
         type="button"
         onClick={togglePlay}
-        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer shadow-md ${
+        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-transform active:scale-95 cursor-pointer shadow-xs ${
           isMe
-            ? 'bg-white text-blue-700 hover:bg-slate-100'
-            : 'bg-blue-600 text-white hover:bg-blue-500'
+            ? 'bg-slate-950 text-lime-400 hover:bg-slate-900'
+            : 'bg-slate-900 text-white hover:bg-slate-800'
         }`}
       >
         {isPlaying ? (
@@ -174,11 +148,11 @@ const VoiceMessagePlayer: React.FC<{
                 className={`w-[3px] rounded-full transition-colors duration-150 ${
                   isPlayed
                     ? isMe
-                      ? 'bg-white shadow-[0_0_6px_rgba(255,255,255,0.8)]'
-                      : 'bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]'
+                      ? 'bg-slate-950'
+                      : 'bg-lime-600'
                     : isMe
-                    ? 'bg-blue-300/40'
-                    : 'bg-slate-600/60'
+                    ? 'bg-slate-700/40'
+                    : 'bg-slate-300'
                 }`}
               />
             );
@@ -186,30 +160,30 @@ const VoiceMessagePlayer: React.FC<{
         </div>
 
         <div className="flex items-center justify-between text-[10px] font-mono opacity-90 px-0.5">
-          <span>{formatAudioDuration(currentTime > 0 ? currentTime : duration)}</span>
+          <span className="font-bold">{formatAudioDuration(currentTime > 0 ? currentTime : duration)}</span>
           <div className="flex items-center gap-1.5">
             <button
               type="button"
               onClick={() => setShowTranscript(!showTranscript)}
               className={`px-1.5 py-0.2 rounded font-bold text-[9px] cursor-pointer transition-colors ${
                 showTranscript
-                  ? 'bg-blue-500 text-white'
+                  ? 'bg-slate-900 text-white'
                   : isMe
-                  ? 'bg-white/20 text-white hover:bg-white/30'
-                  : 'bg-slate-700 text-slate-300 hover:text-white'
+                  ? 'bg-slate-900/10 text-slate-950 hover:bg-slate-900/20'
+                  : 'bg-slate-200 text-slate-800 hover:bg-slate-300'
               }`}
             >
-              {showTranscript ? 'Hide Text' : 'Transcript'}
+              {showTranscript ? 'Hide' : 'Text'}
             </button>
             <button
               type="button"
               onClick={toggleSpeed}
               className={`px-1.5 py-0.2 rounded font-bold text-[9px] cursor-pointer transition-colors ${
                 playbackRate > 1
-                  ? 'bg-amber-400 text-slate-950'
+                  ? 'bg-slate-950 text-lime-400'
                   : isMe
-                  ? 'bg-white/20 text-white hover:bg-white/30'
-                  : 'bg-slate-700 text-slate-300 hover:text-white'
+                  ? 'bg-slate-900/10 text-slate-950 hover:bg-slate-900/20'
+                  : 'bg-slate-200 text-slate-800 hover:bg-slate-300'
               }`}
             >
               {playbackRate}x
@@ -218,13 +192,19 @@ const VoiceMessagePlayer: React.FC<{
         </div>
       </div>
 
-      {showTranscript && (
-        <div className="w-full mt-2 pt-2 border-t border-white/10 text-[11px] italic text-slate-200 leading-snug">
-          "{transcript || 'Spoken audio: Reviewing course requirements, agile sprints, and continuous assessment schedules.'}"
+      {showTranscript && transcript && (
+        <div className="absolute top-full left-0 right-0 mt-1 p-2 rounded-xl bg-white border border-slate-200 text-[11px] text-slate-700 z-20 shadow-md">
+          {transcript}
         </div>
       )}
     </div>
   );
+};
+
+const formatAudioDuration = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
 };
 
 export const StudentChat: React.FC<StudentChatProps> = ({
@@ -233,48 +213,21 @@ export const StudentChat: React.FC<StudentChatProps> = ({
   messages,
   onSendMessage,
 }) => {
+  const [activePartnerId, setActivePartnerId] = useState<string | null>('user-std-2');
   const [searchQuery, setSearchQuery] = useState('');
   const [inputContent, setInputContent] = useState('');
-  const [showRepRestrictionModal, setShowRepRestrictionModal] = useState(false);
-  const [attemptedLecturerName, setAttemptedLecturerName] = useState('');
-  const [mobileView, setMobileView] = useState<'contacts' | 'chat'>('contacts');
-
-  // Voice Recording State
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [showRepRestrictionModal, setShowRepRestrictionModal] = useState(false);
+  const [attemptedLecturerName, setAttemptedLecturerName] = useState('');
+
   const recordingTimerRef = useRef<number | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
 
-  // Course Rep of the class cohort
-  const classCourseRep = allUsers.find(
-    (u) => u.role === 'student' && u.isCourseRep && u.department === currentUser.department
-  );
-
-  // Available students to chat with (excluding oneself)
-  const peerStudents = allUsers.filter(
-    (u) => u.role === 'student' && u.id !== currentUser.id
-  );
-
-  // Available lecturers
+  const students = allUsers.filter((u) => u.role === 'student' && u.id !== currentUser.id);
   const lecturers = allUsers.filter((u) => u.role === 'lecturer');
+  const classCourseRep = allUsers.find((u) => u.role === 'student' && u.isCourseRep);
 
-  // Selected chat partner
-  const [activePartnerId, setActivePartnerId] = useState<string>(
-    peerStudents[0]?.id || ''
-  );
-
-  const activePartner = allUsers.find((u) => u.id === activePartnerId) || peerStudents[0];
-
-  // Filter messages between current user and active partner
-  const conversation = messages.filter(
-    (m) =>
-      (m.senderId === currentUser.id && m.receiverId === activePartner?.id) ||
-      (m.senderId === activePartner?.id && m.receiverId === currentUser.id)
-  );
-
-  // Filter student peers by matric number or name
-  const filteredStudents = peerStudents.filter((s) => {
+  const filteredStudents = students.filter((s) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     const matchName = s.name.toLowerCase().includes(q);
@@ -282,159 +235,109 @@ export const StudentChat: React.FC<StudentChatProps> = ({
     return matchName || matchMatric;
   });
 
-  const handleSelectPartner = (targetUser: User) => {
-    if (targetUser.role === 'lecturer' && !currentUser.isCourseRep && currentUser.role === 'student') {
-      setAttemptedLecturerName(targetUser.name);
-      setShowRepRestrictionModal(true);
-      return;
-    }
+  const activePartner = allUsers.find((u) => u.id === activePartnerId);
 
-    setActivePartnerId(targetUser.id);
-    setMobileView('chat');
+  const conversation = messages.filter(
+    (m) =>
+      (m.senderId === currentUser.id && m.receiverId === activePartnerId) ||
+      (m.senderId === activePartnerId && m.receiverId === currentUser.id)
+  );
+
+  const handleSelectPartner = (partner: User) => {
+    if (partner.role === 'lecturer') {
+      if (!currentUser.isCourseRep && currentUser.role === 'student') {
+        setAttemptedLecturerName(partner.name);
+        setShowRepRestrictionModal(true);
+        return;
+      }
+    }
+    setActivePartnerId(partner.id);
   };
 
   const handleSendText = (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputContent.trim() || !activePartner) return;
-
     onSendMessage(activePartner.id, inputContent.trim());
     setInputContent('');
   };
 
-  // Start Voice Recording
-  const startRecording = async () => {
+  const startRecording = () => {
     setIsRecording(true);
     setRecordingSeconds(0);
-    audioChunksRef.current = [];
-
-    // Start timer counter
     recordingTimerRef.current = window.setInterval(() => {
       setRecordingSeconds((prev) => prev + 1);
     }, 1000);
-
-    // Try acquiring real microphone
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const recorder = new MediaRecorder(stream);
-        mediaRecorderRef.current = recorder;
-
-        recorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-
-        recorder.start();
-      }
-    } catch (err) {
-      // Sandbox fallback: MediaRecorder may be blocked by iframe permissions policy,
-      // fallback smoothly to synthetic voice recording mode!
-      console.log('Using synthetic voice recording fallback mode.');
-    }
   };
 
-  // Cancel Voice Recording
   const cancelRecording = () => {
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
-    }
     setIsRecording(false);
     setRecordingSeconds(0);
-    audioChunksRef.current = [];
   };
 
-  // Finish and Send Voice Recording
   const sendRecording = () => {
-    if (!activePartner) return;
-    const duration = Math.max(2, recordingSeconds);
-    const waveform = generateWaveform(26);
-
     if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    if (!activePartner) return;
 
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.onstop = () => {
-        let audioUrl = '';
-        if (audioChunksRef.current.length > 0) {
-          const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-          audioUrl = URL.createObjectURL(audioBlob);
-        } else {
-          audioUrl = createSyntheticVoiceBlob(duration);
-        }
+    const duration = Math.max(3, recordingSeconds);
+    const waveform = Array.from({ length: 16 }, () => Math.floor(Math.random() * 70) + 25);
+    
+    onSendMessage(activePartner.id, `Voice Note (${duration}s)`, {
+      audioUrl: 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=',
+      duration,
+      waveform,
+    });
 
-        onSendMessage(activePartner.id, `Voice message (${duration}s)`, {
-          audioUrl,
-          duration,
-          waveform,
-        });
-
-        setIsRecording(false);
-        setRecordingSeconds(0);
-      };
-      mediaRecorderRef.current.stop();
-      mediaRecorderRef.current.stream.getTracks().forEach((t) => t.stop());
-    } else {
-      // Fallback synthetic voice blob
-      const audioUrl = createSyntheticVoiceBlob(duration);
-      onSendMessage(activePartner.id, `Voice message (${duration}s)`, {
-        audioUrl,
-        duration,
-        waveform,
-      });
-
-      setIsRecording(false);
-      setRecordingSeconds(0);
-    }
+    setIsRecording(false);
+    setRecordingSeconds(0);
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
+    <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-300">
       
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl liquid-glass p-6 sm:p-8">
+      <div className="relative overflow-hidden rounded-3xl bg-white border border-slate-200/90 p-5 sm:p-8 shadow-[0_4px_25px_-4px_rgba(15,23,42,0.05)]">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <span className="font-mono text-xs px-2.5 py-0.5 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30">
+              <span className="font-mono text-xs px-2.5 py-0.5 rounded-lg bg-lime-100 text-lime-900 border border-lime-300 font-bold">
                 Voice & Text Peer Messaging
               </span>
               {currentUser.isCourseRep ? (
-                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1 font-semibold">
-                  <ShieldCheck className="w-3.5 h-3.5 text-amber-400" /> Course Rep Liaison Enabled
+                <span className="text-xs px-2.5 py-0.5 rounded-lg bg-[#ccf32f] text-slate-950 border border-lime-400 flex items-center gap-1 font-bold">
+                  <ShieldCheck className="w-3.5 h-3.5 text-lime-800" /> Course Rep Liaison Enabled
                 </span>
               ) : (
-                <span className="text-xs text-slate-400 font-mono">
+                <span className="text-xs text-slate-500 font-mono">
                   Matric & Name Search Enabled
                 </span>
               )}
             </div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-              <MessageSquare className="w-6 h-6 text-blue-400" />
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <MessageSquare className="w-6 h-6 text-lime-700" />
               Student Academic Communication & Voice Messaging
             </h1>
-            <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+            <p className="text-xs text-slate-600 mt-1 max-w-2xl leading-relaxed">
               Exchange text messages and recorded voice notes with fellow students. Official direct messages and voice notes to lecturers are handled exclusively by your appointed Course Representative.
             </p>
           </div>
 
           <div className="text-right hidden sm:block">
-            <div className="text-xs text-slate-400">Your Identity</div>
-            <div className="text-sm font-bold text-white">{currentUser.name}</div>
-            <div className="text-xs font-mono text-cyan-300">{currentUser.matricNumber || currentUser.staffId}</div>
+            <div className="text-xs text-slate-500">Your Identity</div>
+            <div className="text-sm font-bold text-slate-900">{currentUser.name}</div>
+            <div className="text-xs font-mono text-lime-800 font-bold">{currentUser.matricNumber || currentUser.staffId}</div>
           </div>
         </div>
       </div>
 
       {/* Split Chat Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 rounded-3xl liquid-glass overflow-hidden min-h-[580px] border border-slate-800 shadow-xl">
+      <div className="grid grid-cols-1 lg:grid-cols-12 rounded-3xl bg-white border border-slate-200/90 shadow-2xs overflow-hidden min-h-[580px]">
         
         {/* Left Sidebar: Contacts & Search (4 cols) */}
-        <div className={`lg:col-span-4 border-r border-slate-800 flex flex-col bg-slate-950/50 ${activePartner ? 'hidden lg:flex' : 'flex'}`}>
+        <div className={`lg:col-span-4 border-r border-slate-200 flex flex-col bg-slate-50/50 ${activePartner ? 'hidden lg:flex' : 'flex'}`}>
           
           {/* Search Box */}
-          <div className="p-4 border-b border-white/10">
+          <div className="p-4 border-b border-slate-200">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
@@ -442,7 +345,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by Matric No (CSC/...) or Name..."
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white/5 border border-white/10 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-lime-400"
               />
             </div>
           </div>
@@ -452,10 +355,10 @@ export const StudentChat: React.FC<StudentChatProps> = ({
             
             {/* Lecturer Section */}
             <div>
-              <div className="px-2 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <div className="px-2 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold flex items-center justify-between">
                 <span>Course Lecturers</span>
                 {!currentUser.isCourseRep && currentUser.role === 'student' && (
-                  <span className="text-amber-400 flex items-center gap-1 text-[9px]">
+                  <span className="text-amber-700 flex items-center gap-1 text-[9px] font-bold">
                     <Lock className="w-3 h-3" /> Rep Access Only
                   </span>
                 )}
@@ -472,8 +375,8 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                       onClick={() => handleSelectPartner(lec)}
                       className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
                         isSelected
-                          ? 'bg-blue-600/25 border border-blue-500/40 text-white'
-                          : 'hover:bg-white/5 text-slate-300'
+                          ? 'bg-[#ccf32f]/30 border border-lime-400 text-slate-950 font-bold shadow-2xs'
+                          : 'hover:bg-white text-slate-700'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -482,26 +385,26 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                             src={lec.avatar}
                             alt={lec.name}
                             referrerPolicy="no-referrer"
-                            className="w-9 h-9 rounded-xl object-cover border border-white/15"
+                            className="w-9 h-9 rounded-xl object-cover border border-slate-200"
                           />
-                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900" />
+                          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-lime-500 rounded-full border border-white" />
                         </div>
                         <div>
-                          <div className="text-xs font-semibold text-white flex items-center gap-1">
+                          <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
                             <span>{lec.name}</span>
                           </div>
-                          <div className="text-[10px] text-slate-400 font-mono">
+                          <div className="text-[10px] text-slate-500 font-mono">
                             {lec.coursesTaught?.join(', ')}
                           </div>
                         </div>
                       </div>
 
                       {canMessage ? (
-                        <span className="text-[10px] text-amber-300 font-mono px-1.5 py-0.5 rounded bg-amber-500/20">
+                        <span className="text-[10px] text-slate-950 font-mono font-bold px-1.5 py-0.5 rounded bg-[#ccf32f] border border-lime-400">
                           REP
                         </span>
                       ) : (
-                        <Lock className="w-3.5 h-3.5 text-slate-500" />
+                        <Lock className="w-3.5 h-3.5 text-slate-400" />
                       )}
                     </button>
                   );
@@ -511,7 +414,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
 
             {/* Students Section */}
             <div>
-              <div className="px-2 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <div className="px-2 pb-1.5 text-[10px] font-mono uppercase tracking-wider text-slate-500 font-bold flex items-center justify-between">
                 <span>Enrolled Peer Students</span>
                 <span className="font-mono text-[10px]">{filteredStudents.length} Students</span>
               </div>
@@ -519,7 +422,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
               <div className="space-y-1">
                 {filteredStudents.length === 0 ? (
                   <div className="p-4 text-center text-xs text-slate-500">
-                    No students match "{searchQuery}"
+                    No students match your query.
                   </div>
                 ) : (
                   filteredStudents.map((std) => {
@@ -530,8 +433,8 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                         onClick={() => handleSelectPartner(std)}
                         className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
                           isSelected
-                            ? 'bg-blue-600/25 border border-blue-500/40 text-white'
-                            : 'hover:bg-white/5 text-slate-300'
+                            ? 'bg-[#ccf32f]/30 border border-lime-400 text-slate-950 font-bold shadow-2xs'
+                            : 'hover:bg-white text-slate-700'
                         }`}
                       >
                         <div className="flex items-center gap-2.5">
@@ -540,28 +443,24 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                               src={std.avatar}
                               alt={std.name}
                               referrerPolicy="no-referrer"
-                              className="w-9 h-9 rounded-xl object-cover border border-white/15"
+                              className="w-9 h-9 rounded-xl object-cover border border-slate-200"
                             />
-                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border border-slate-900" />
+                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-lime-500 rounded-full border border-white" />
                           </div>
                           <div>
-                            <div className="text-xs font-semibold text-white flex items-center gap-1.5">
+                            <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
                               <span>{std.name}</span>
                               {std.isCourseRep && (
-                                <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                                  Course Rep
+                                <span className="text-[9px] px-1 py-0.2 rounded bg-amber-100 text-amber-900 font-bold">
+                                  REP
                                 </span>
                               )}
                             </div>
-                            <div className="text-[10px] text-cyan-300 font-mono">
+                            <div className="text-[10px] text-slate-500 font-mono">
                               {std.matricNumber}
                             </div>
                           </div>
                         </div>
-
-                        <span className="text-[10px] text-slate-400 font-mono">
-                          {std.level}
-                        </span>
                       </button>
                     );
                   })
@@ -574,53 +473,53 @@ export const StudentChat: React.FC<StudentChatProps> = ({
         </div>
 
         {/* Right Chat Viewport (8 cols) */}
-        <div className={`lg:col-span-8 flex flex-col bg-slate-900/60 ${activePartner ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`lg:col-span-8 flex flex-col bg-white ${activePartner ? 'flex' : 'hidden lg:flex'}`}>
           
           {activePartner ? (
             <>
               {/* Partner Header */}
-              <div className="p-3.5 sm:p-4 border-b border-slate-800 flex items-center justify-between bg-slate-950/40">
+              <div className="p-3.5 sm:p-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/70">
                 <div className="flex items-center gap-2.5 sm:gap-3">
                   {/* Mobile Back Button to Contacts */}
                   <button
                     type="button"
                     onClick={() => setActivePartnerId(null)}
-                    className="lg:hidden p-1.5 -ml-1 rounded-xl bg-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    className="lg:hidden p-1.5 -ml-1 rounded-xl bg-slate-200 text-slate-800 hover:text-slate-950 transition-colors cursor-pointer"
                     title="Back to contacts list"
                   >
-                    <ArrowLeft className="w-4 h-4 text-indigo-400" />
+                    <ArrowLeft className="w-4 h-4" />
                   </button>
                   <img
                     src={activePartner.avatar}
                     alt={activePartner.name}
                     referrerPolicy="no-referrer"
-                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-slate-700"
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl object-cover border border-slate-200"
                   />
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="text-xs sm:text-sm font-bold text-white">
+                      <h3 className="text-xs sm:text-sm font-bold text-slate-900">
                         {activePartner.name}
                       </h3>
                       {activePartner.matricNumber && (
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-cyan-500/10 text-cyan-300 border border-cyan-500/20">
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-lime-100 text-lime-900 border border-lime-300 font-bold">
                           {activePartner.matricNumber}
                         </span>
                       )}
                       {activePartner.isCourseRep && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 font-bold">
                           Course Rep
                         </span>
                       )}
                     </div>
-                    <div className="text-[11px] text-slate-400">
+                    <div className="text-[11px] text-slate-500">
                       {activePartner.department} · {activePartner.level || 'Academic Staff'}
                     </div>
                   </div>
                 </div>
 
                 <div className="text-right hidden sm:block">
-                  <span className="text-[10px] font-mono text-emerald-400 flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" /> Voice & Text Ready
+                  <span className="text-[10px] font-mono text-lime-800 font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-lime-500" /> Voice & Text Ready
                   </span>
                 </div>
               </div>
@@ -628,12 +527,12 @@ export const StudentChat: React.FC<StudentChatProps> = ({
               {/* Message Thread History */}
               <div className="flex-1 p-5 overflow-y-auto space-y-4 max-h-[440px]">
                 {conversation.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-400">
-                    <MessageSquare className="w-10 h-10 text-slate-600 mb-2" />
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 text-slate-500">
+                    <MessageSquare className="w-10 h-10 text-slate-300 mb-2" />
                     <p className="text-xs">
                       No previous messages with <strong>{activePartner.name}</strong>.
                     </p>
-                    <p className="text-[11px] text-slate-500 mt-1">
+                    <p className="text-[11px] text-slate-400 mt-1">
                       Type a message or record a voice note below to start academic collaboration.
                     </p>
                   </div>
@@ -652,23 +551,23 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                             src={msg.senderAvatar}
                             alt={msg.senderName}
                             referrerPolicy="no-referrer"
-                            className="w-7 h-7 rounded-lg object-cover border border-white/10 mb-1"
+                            className="w-7 h-7 rounded-lg object-cover border border-slate-200 mb-1"
                           />
                         )}
 
                         <div className={`max-w-[82%] space-y-1 ${isMe ? 'text-right' : 'text-left'}`}>
-                          <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 px-1">
+                          <div className="text-[10px] text-slate-500 font-mono flex items-center gap-1.5 px-1">
                             <span>{msg.senderName}</span>
                             {msg.senderMatric && (
-                              <span className="text-cyan-400">({msg.senderMatric})</span>
+                              <span className="text-slate-700">({msg.senderMatric})</span>
                             )}
                           </div>
 
                           <div
                             className={`p-3.5 rounded-2xl text-xs leading-relaxed ${
                               isMe
-                                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-br-none shadow-lg shadow-blue-600/20'
-                                : 'bg-slate-800/90 text-slate-100 rounded-bl-none border border-white/10'
+                                ? 'bg-[#ccf32f] text-slate-950 rounded-br-none border border-lime-400 shadow-2xs font-medium'
+                                : 'bg-slate-100 text-slate-900 rounded-bl-none border border-slate-200'
                             }`}
                           >
                             {isVoice ? (
@@ -688,7 +587,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                             <span>
                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
-                            {isMe && <CheckCheck className="w-3.5 h-3.5 text-blue-400" />}
+                            {isMe && <CheckCheck className="w-3.5 h-3.5 text-lime-700" />}
                           </div>
                         </div>
                       </div>
@@ -698,17 +597,17 @@ export const StudentChat: React.FC<StudentChatProps> = ({
               </div>
 
               {/* Message Input Form / Voice Recording Bar */}
-              <div className="p-4 border-t border-white/10 bg-slate-950/50">
+              <div className="p-4 border-t border-slate-200 bg-slate-50/50">
                 {isRecording ? (
                   /* Active Voice Recording Bar */
-                  <div className="flex items-center justify-between p-2.5 rounded-2xl bg-rose-950/40 border border-rose-500/40 animate-in fade-in duration-150">
+                  <div className="flex items-center justify-between p-2.5 rounded-2xl bg-rose-50 border border-rose-200 animate-in fade-in duration-150">
                     <div className="flex items-center gap-3">
-                      <div className="w-3 h-3 rounded-full bg-rose-500 animate-pulse ml-2" />
+                      <div className="w-3 h-3 rounded-full bg-rose-600 animate-pulse ml-2" />
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-mono font-bold text-rose-300">
+                        <span className="text-xs font-mono font-bold text-rose-800">
                           {formatAudioDuration(recordingSeconds)}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-mono hidden sm:inline">
+                        <span className="text-[11px] text-slate-600 font-mono hidden sm:inline">
                           Recording voice message...
                         </span>
                       </div>
@@ -719,7 +618,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                           <div
                             key={i}
                             style={{ height: `${h}%` }}
-                            className="w-[2.5px] rounded-full bg-rose-400 animate-pulse"
+                            className="w-[2.5px] rounded-full bg-rose-500 animate-pulse"
                           />
                         ))}
                       </div>
@@ -729,7 +628,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                       <button
                         type="button"
                         onClick={cancelRecording}
-                        className="p-2 rounded-xl bg-white/10 hover:bg-rose-500/20 text-slate-300 hover:text-rose-300 transition-colors cursor-pointer"
+                        className="p-2 rounded-xl bg-white hover:bg-rose-100 text-slate-700 hover:text-rose-700 transition-colors cursor-pointer border border-slate-200"
                         title="Cancel voice recording"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -738,7 +637,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                       <button
                         type="button"
                         onClick={sendRecording}
-                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white text-xs font-bold shadow-lg shadow-rose-600/30 transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow transition-all cursor-pointer"
                         title="Send voice note"
                       >
                         <Send className="w-3.5 h-3.5" />
@@ -754,24 +653,24 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                       value={inputContent}
                       onChange={(e) => setInputContent(e.target.value)}
                       placeholder={`Message ${activePartner.name}...`}
-                      className="flex-1 px-4 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-colors"
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-lime-400 transition-colors"
                     />
 
                     {/* Microphone Record Button */}
                     <button
                       type="button"
                       onClick={startRecording}
-                      className="p-2.5 rounded-xl bg-white/5 hover:bg-blue-600/20 text-slate-300 hover:text-blue-300 border border-white/15 transition-all cursor-pointer"
+                      className="p-2.5 rounded-xl bg-white hover:bg-lime-50 text-slate-700 hover:text-slate-950 border border-slate-200 hover:border-lime-400 transition-all cursor-pointer"
                       title="Hold / Click to record voice note"
                     >
-                      <Mic className="w-4 h-4" />
+                      <Mic className="w-4 h-4 text-lime-700" />
                     </button>
 
                     {/* Send Text Button */}
                     <button
                       type="submit"
                       disabled={!inputContent.trim()}
-                      className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white transition-all cursor-pointer shadow-md shadow-blue-500/20"
+                      className="p-2.5 rounded-xl bg-[#ccf32f] hover:bg-[#bfe628] disabled:opacity-40 text-slate-950 font-bold border border-lime-400 transition-all cursor-pointer shadow-2xs"
                     >
                       <Send className="w-4 h-4" />
                     </button>
@@ -780,7 +679,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
               </div>
             </>
           ) : (
-            <div className="h-full flex items-center justify-center p-8 text-slate-400 text-xs">
+            <div className="h-full flex items-center justify-center p-8 text-slate-500 text-xs">
               Select a peer student or course rep from the list to start messaging.
             </div>
           )}
@@ -791,32 +690,32 @@ export const StudentChat: React.FC<StudentChatProps> = ({
 
       {/* Course Rep Restriction Modal */}
       {showRepRestrictionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-slate-900 p-6 shadow-2xl text-slate-100 text-left">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center mb-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
+          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl text-slate-900 text-left">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-800 border border-amber-300 flex items-center justify-center mb-4">
               <ShieldAlert className="w-6 h-6" />
             </div>
 
-            <h3 className="text-base font-bold text-white mb-2">
+            <h3 className="text-base font-bold text-slate-900 mb-2">
               Official Course Representative Policy
             </h3>
 
-            <p className="text-xs text-slate-300 leading-relaxed mb-4">
-              To prevent lecturer inbox congestion and ensure structured academic governance, direct messages and voice notes to course lecturers (<strong className="text-white">{attemptedLecturerName}</strong>) are restricted to your cohort's appointed Course Representative:
+            <p className="text-xs text-slate-600 leading-relaxed mb-4">
+              To prevent lecturer inbox congestion and ensure structured academic governance, direct messages and voice notes to course lecturers (<strong className="text-slate-900">{attemptedLecturerName}</strong>) are restricted to your cohort's appointed Course Representative:
             </p>
 
             {classCourseRep ? (
-              <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-4 flex items-center justify-between">
+              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <img
                     src={classCourseRep.avatar}
                     alt={classCourseRep.name}
                     referrerPolicy="no-referrer"
-                    className="w-9 h-9 rounded-xl object-cover"
+                    className="w-9 h-9 rounded-xl object-cover border border-slate-200"
                   />
                   <div>
-                    <div className="text-xs font-bold text-white">{classCourseRep.name}</div>
-                    <div className="text-[11px] text-amber-300 font-mono">
+                    <div className="text-xs font-bold text-slate-900">{classCourseRep.name}</div>
+                    <div className="text-[11px] text-amber-800 font-mono font-semibold">
                       Matric: {classCourseRep.matricNumber} (Course Rep)
                     </div>
                   </div>
@@ -826,7 +725,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
                     setShowRepRestrictionModal(false);
                     setActivePartnerId(classCourseRep.id);
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 text-xs font-bold hover:bg-amber-400 cursor-pointer"
+                  className="px-3 py-1.5 rounded-xl bg-[#ccf32f] text-slate-950 text-xs font-bold border border-lime-400 hover:bg-[#bfe628] cursor-pointer shadow-2xs"
                 >
                   Message Rep
                 </button>
@@ -836,7 +735,7 @@ export const StudentChat: React.FC<StudentChatProps> = ({
             <div className="flex justify-end gap-2 pt-2">
               <button
                 onClick={() => setShowRepRestrictionModal(false)}
-                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-xs text-slate-200 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs text-slate-700 font-bold cursor-pointer"
               >
                 Understood
               </button>

@@ -19,38 +19,38 @@ export const getDegreeClassification = (cgpa: number): { text: string; color: st
   if (cgpa >= 4.5) {
     return {
       text: 'First Class Honours',
-      color: 'text-amber-300',
-      badge: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+      color: 'text-slate-950 font-bold',
+      badge: 'bg-[#ccf32f] text-slate-950 border border-lime-400 shadow-xs font-bold',
     };
   } else if (cgpa >= 3.5) {
     return {
       text: 'Second Class Honours (Upper Division)',
-      color: 'text-emerald-300',
-      badge: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      color: 'text-emerald-800 font-bold',
+      badge: 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-semibold',
     };
   } else if (cgpa >= 2.4) {
     return {
       text: 'Second Class Honours (Lower Division)',
-      color: 'text-blue-300',
-      badge: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+      color: 'text-sky-800 font-bold',
+      badge: 'bg-sky-100 text-sky-900 border border-sky-300 font-semibold',
     };
   } else if (cgpa >= 1.5) {
     return {
       text: 'Third Class Honours',
-      color: 'text-yellow-300',
-      badge: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
+      color: 'text-amber-800 font-bold',
+      badge: 'bg-amber-100 text-amber-900 border border-amber-300 font-semibold',
     };
   } else if (cgpa >= 1.0) {
     return {
-      text: 'Pass',
-      color: 'text-orange-300',
-      badge: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+      text: 'Pass Degree',
+      color: 'text-orange-800 font-bold',
+      badge: 'bg-orange-100 text-orange-900 border border-orange-300 font-semibold',
     };
   } else {
     return {
-      text: 'Probation / Fail',
-      color: 'text-rose-400',
-      badge: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+      text: 'Academic Probation / Fail',
+      color: 'text-rose-800 font-bold',
+      badge: 'bg-rose-100 text-rose-900 border border-rose-300 font-semibold',
     };
   }
 };
